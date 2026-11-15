@@ -1,70 +1,86 @@
-# 📋 MiniKanban.WPF
+# MiniKanban.WPF
 
-Aplicación de escritorio interactiva estilo **Tablero Kanban** desarrollada con **WPF (.NET 8)** implementando rigurosamente el patrón arquitectónico **MVVM (Model-View-ViewModel)** y buenas prácticas de ingeniería de software (**SOLID**).
-
----
-
-## 🚀 Características
-
-* **Flujo Kanban Completo:** Gestión de tareas en 3 columnas independientes:
-  * 📋 **Por Hacer** (*To Do*)
-  * ⏳ **En Progreso** (*In Progress*)
-  * ✅ **Hechas** (*Done*, con soporte de tachado visual y reabrir)
-* **Operaciones CRUD en memoria:**
-  * Crear nueva tarea con validación en tiempo real.
-  * Mover tareas fluidamente hacia adelante y hacia atrás.
-  * Eliminar tareas de forma individual.
-* **Separación Estricta de Responsabilidades:**
-  * Interfaz de usuario desacoplada de la lógica de negocio.
-  * Cero lógica en el code-behind (`MainWindow.xaml.cs`).
+Aplicación de escritorio estilo **Tablero Kanban** desarrollada con **WPF (.NET 8)**, **MVVM** (`CommunityToolkit.Mvvm`), **Entity Framework Core + SQLite**, **LINQ**, **ADO.NET**, **Inyección de Dependencias (DIP)** y **pruebas automatizadas con xUnit**.
 
 ---
 
-## 🛠️ Tecnologías y Arquitectura
+## Características implementadas
 
-* **Lenguaje & Framework:** C# / .NET 8.0 (Windows Presentation Foundation - WPF)
-* **Patrón de Diseño:** MVVM (Model-View-ViewModel)
-* **Librería MVVM:** `CommunityToolkit.Mvvm` (Microsoft)
-  * `ObservableObject` para la reactividad del ViewModel.
-  * `[ObservableProperty]` para la generación de propiedades observables con Two-Way Data Binding.
-  * `[RelayCommand]` para la ejecución de comandos desacoplados.
-  * `ObservableCollection<T>` para la actualización en tiempo real de las columnas Kanban.
-* **Principios SOLID aplicados:**
-  * **S (Single Responsibility):** Cada clase tiene una única responsabilidad bien definida (Entidad de datos, Servicio de memoria, ViewModel, Vista XAML).
-  * **D (Dependency Inversion):** El `MainViewModel` depende de la abstracción `ITareaService`, inyectada a través de su constructor.
+- **Tablero Kanban en 3 columnas:**
+  - **Por Hacer** (`EstadoTarea.PorHacer`)
+  - **En Progreso** (`EstadoTarea.EnProgreso`)
+  - **Hecho** (`EstadoTarea.Hecho`, con tachado visual automático mediante `DataTrigger`)
+- **Persistencia local con Entity Framework Core + SQLite (`EnsureCreated`):**
+  - Entidades `Tarea` y `Categoria` con Data Annotations y relación 1:N (`DeleteBehavior.Restrict`).
+  - Inicialización automática de `kanban.db` mediante `Database.EnsureCreated()` con categorías semilla (`HasData`) y tareas iniciales de ejemplo.
+  - Consultas de lectura optimizadas con `AsNoTracking()`, carga de relación con `Include()` y gestión explícita del **Change Tracker** (`Added`, `Modified`, `Deleted`) capturando `DbUpdateException`.
+- **Consultas dinámicas con LINQ:**
+  - Filtro por texto (`EF.Functions.Like` / búsqueda en título y descripción), prioridad, categoría y ordenación dinámica antes de materializar con `ToListAsync()`.
+- **Reportes y Auditoría con ADO.NET puro:**
+  - **Modo conectado:** `SqliteConnection`, `SqliteCommand` parametrizado y `ExecuteReaderAsync()` en `EstadisticasAdoRepositorio.ObtenerResumenAsync` para las métricas del encabezado.
+  - **Modo desconectado:** Carga de un `DataTable` mediante `DataTable.Load(reader)` en `ObtenerTablaAuditoriaAsync` enlazado a un `DataGrid` desplegable filtrable por estado.
+- **Arquitectura desacoplada (DIP + Repository + SRP):**
+  - `MainViewModel` opera exclusivamente con interfaces (`ITareaRepositorio`, `ICategoriaRepositorio`, `IEstadisticasRepositorio`, `ITareaValidador`) y comandos `[RelayCommand]` 100% asíncronos.
+  - Dobles en memoria (`TareaRepositorioMemoria`, `CategoriaRepositorioMemoria`, `EstadisticasMemoriaRepositorio`) para probar el `MainViewModel` sin tocar SQLite.
 
 ---
 
-## 📁 Estructura del Proyecto
+## Tecnologías y paquetes
+
+- **Framework:** `.NET 8.0` (`net8.0-windows`, WPF)
+- **MVVM:** `CommunityToolkit.Mvvm` (`8.4.2`)
+- **ORM y Base de Datos:** `Microsoft.EntityFrameworkCore.Sqlite` (`8.0.11`)
+- **Contenedor DI:** `Microsoft.Extensions.DependencyInjection` (`10.0.12`)
+- **Testing:** `xUnit` en `MiniKanban.Tests`
+
+---
+
+## Estructura de la solución
 
 ```text
 MiniKanban.WPF/
-├── Models/
-│   └── Tarea.cs              # Entidad POCO y Enums (EstadoTarea, PrioridadTarea)
-├── Services/
-│   ├── ITareaService.cs      # Contrato de operaciones CRUD
-│   └── TareaService.cs       # Implementación del servicio en memoria
-├── ViewModels/
-│   └── MainViewModel.cs      # Lógica de presentación, colecciones y RelayCommands
-├── Views/
-│   ├── MainWindow.xaml       # Diseño visual de la ventana y Data Templates
-│   └── MainWindow.xaml.cs    # Inicialización y asignación del DataContext
-└── App.xaml                  # Punto de entrada de la aplicación
+├── MiniKanban.WPF.sln
+├── MiniKanban.WPF/
+│   ├── Data/
+│   │   └── AppDbContext.cs                      # DbContext EF Core + HasData + DeleteBehavior.Restrict
+│   ├── Models/
+│   │   ├── Categoria.cs                         # Entidad Categoría (1:N con Tarea)
+│   │   ├── ResumenKanban.cs                     # Record de métricas agregadas ADO.NET
+│   │   └── Tarea.cs                             # Entidad Tarea + EstadoTarea + PrioridadTarea
+│   ├── Repositories/
+│   │   ├── ITareaRepositorio.cs                 # Contrato Repository de tareas
+│   │   ├── ICategoriaRepositorio.cs             # Contrato Repository de categorías
+│   │   ├── IEstadisticasRepositorio.cs          # Contrato de métricas y DataTable
+│   │   ├── TareaRepositorioEfCore.cs            # Implementación EF Core (LINQ + AsNoTracking + Change Tracker)
+│   │   ├── CategoriaRepositorioEfCore.cs        # Implementación EF Core de categorías
+│   │   ├── EstadisticasAdoRepositorio.cs        # Implementación ADO.NET (DataReader + DataTable)
+│   │   ├── TareaRepositorioMemoria.cs           # Implementación en memoria (DIP / tests)
+│   │   ├── CategoriaRepositorioMemoria.cs       # Implementación en memoria (DIP / tests)
+│   │   └── EstadisticasMemoriaRepositorio.cs    # Implementación en memoria (DIP / tests)
+│   ├── Services/
+│   │   ├── ITareaValidador.cs                   # Contrato de validación de dominio (SRP)
+│   │   └── TareaValidador.cs                    # Reglas de validación de tareas
+│   ├── ViewModels/
+│   │   └── MainViewModel.cs                     # Lógica de presentación asíncrona y comandos MVVM
+│   ├── Views/
+│   │   ├── MainWindow.xaml                      # UI WPF + plantilla compartida de tarjeta + DataGrid ADO.NET
+│   │   └── MainWindow.xaml.cs                   # Inicialización con DI y carga asíncrona
+│   └── App.xaml / App.xaml.cs                   # Contenedor DI + EnsureCreated()
+└── MiniKanban.Tests/
+    ├── MainViewModelTests.cs                    # Pruebas unitarias en memoria del ViewModel (DIP)
+    └── SqlitePersistenciaTests.cs               # Pruebas de integración con SQLite (EF Core + ADO.NET)
 ```
 
+Consulta la explicación detallada de cada clase, interfaz, método, propiedad, ciclo y decisión arquitectónica en [EXPLICACION_PROYECTO.md](EXPLICACION_PROYECTO.md).
+
 ---
 
-## 💻 Requisitos y Ejecución
+## Ejecución y pruebas
 
-1. Tener instalado **Visual Studio 2022** con la carga de trabajo de **Desarrollo de escritorio de .NET**.
-2. Clonar el repositorio:
+1. Clonar el repositorio y abrir `MiniKanban.WPF.sln` en Visual Studio 2022, o usar la CLI de .NET:
    ```bash
-   git clone https://github.com/anthonybuitrago/MiniKanban.WPF.git
+   dotnet build MiniKanban.WPF.sln
+   dotnet test MiniKanban.WPF.sln
+   dotnet run --project MiniKanban.WPF/MiniKanban.WPF.csproj
    ```
-3. Abrir la solución `MiniKanban.WPF.sln`.
-4. Compilar y ejecutar (`F5`).
-
----
-
-## 👨‍💻 Autor
-Desarrollado por **Anthony Buitrago** como parte de la práctica guiada de Arquitectura de Software y Patrones de Diseño.
+2. Al iniciar la aplicación, `EnsureCreated()` creará automáticamente `kanban.db` en la carpeta de ejecución con las categorías y tareas iniciales.

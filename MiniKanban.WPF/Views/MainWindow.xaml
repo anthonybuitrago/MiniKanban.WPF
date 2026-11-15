@@ -1,149 +1,379 @@
-﻿<Window x:Class="MiniKanban.WPF.MainWindow"
+﻿<Window x:Class="MiniKanban.WPF.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:MiniKanban.WPF"
+        xmlns:models="clr-namespace:MiniKanban.WPF.Models"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MiniKanban · EF Core, LINQ, Repository &amp; ADO.NET"
+        Height="780" Width="1180" MinWidth="920" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="#FAFBFC">
 
-    <Grid Margin=" 15">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
+        <!-- Estilo común para columnas Kanban -->
+        <Style x:Key="ColumnaKanbanStyle" TargetType="Border">
+            <Setter Property="Background" Value="#EBECF0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10" />
+            <Setter Property="Margin" Value="5" />
+        </Style>
+
+        <!-- Estilo para pastillas de resumen ADO.NET -->
+        <Style x:Key="ResumenPillStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#DFE1E6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Margin" Value="4,0" />
+        </Style>
+
+        <!-- Plantilla única compartida para las tarjetas en las 3 columnas -->
+        <DataTemplate x:Key="TarjetaKanbanTemplate" DataType="{x:Type models:Tarea}">
+            <Border Background="White" CornerRadius="6" Padding="11" Margin="0,0,0,8"
+                    BorderBrush="#DFE1E6" BorderThickness="1">
+                <StackPanel>
+                    <!-- Fila superior: Categoría + Prioridad -->
+                    <DockPanel Margin="0,0,0,6">
+                        <Border DockPanel.Dock="Left" CornerRadius="4" Padding="6,2"
+                                Background="{Binding Categoria.ColorHex, TargetNullValue=#5E6C84}">
+                            <TextBlock Text="{Binding Categoria.Nombre, TargetNullValue=General}"
+                                       Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                        </Border>
+
+                        <Border DockPanel.Dock="Right" CornerRadius="4" Padding="7,2">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#E3FCEF" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Prioridad}" Value="{x:Static models:PrioridadTarea.Media}">
+                                            <Setter Property="Background" Value="#FFFAE6" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Prioridad}" Value="{x:Static models:PrioridadTarea.Alta}">
+                                            <Setter Property="Background" Value="#FFEBE6" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding Prioridad}" FontSize="11" FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#006644" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Prioridad}" Value="{x:Static models:PrioridadTarea.Media}">
+                                                <Setter Property="Foreground" Value="#B25E09" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Prioridad}" Value="{x:Static models:PrioridadTarea.Alta}">
+                                                <Setter Property="Foreground" Value="#BF2600" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <Grid />
+                    </DockPanel>
+
+                    <!-- Título (tachado automáticamente si Estado == Hecho) -->
+                    <TextBlock Text="{Binding Titulo}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#172B4D" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoTarea.Hecho}">
+                                        <Setter Property="TextDecorations" Value="Strikethrough" />
+                                        <Setter Property="Foreground" Value="#6B778C" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Descripción -->
+                    <TextBlock Text="{Binding Descripcion}" TextWrapping="Wrap" Margin="0,4,0,6"
+                               Foreground="#5E6C84" FontSize="12.5" />
+
+                    <!-- Fecha límite formateada en XAML -->
+                    <TextBlock Text="{Binding FechaLimite, StringFormat='📅 Vence: {0:dd/MM/yyyy}'}"
+                               FontSize="11.5" Foreground="#6B778C" Margin="0,0,0,8" />
+
+                    <!-- Botones de acción conectados al MainViewModel -->
+                    <DockPanel>
+                        <Button DockPanel.Dock="Left" Content="⬅️"
+                                Command="{Binding DataContext.RetrocederTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                Margin="0,0,5,0" Padding="7,3" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoTarea.PorHacer}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Button DockPanel.Dock="Left" Content="🗑️"
+                                Command="{Binding DataContext.EliminarTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent" BorderThickness="0" Padding="5,3" Cursor="Hand" />
+
+                        <Button DockPanel.Dock="Right"
+                                Command="{Binding DataContext.AvanzarTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                Foreground="White" Padding="9,3" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Content" Value="Avanzar ➡️" />
+                                    <Setter Property="Background" Value="#0052CC" />
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoTarea.EnProgreso}">
+                                            <Setter Property="Content" Value="Completar ➡️" />
+                                            <Setter Property="Background" Value="#00875A" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoTarea.Hecho}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Grid />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Margin="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <!-- Fila 0: Cabecera + Estadísticas ADO.NET -->
+            <RowDefinition Height="Auto" />
+            <!-- Fila 1: Banner de errores -->
+            <RowDefinition Height="Auto" />
+            <!-- Fila 2: Formulario de creación -->
+            <RowDefinition Height="Auto" />
+            <!-- Fila 3: Barra de búsqueda y filtros LINQ -->
             <RowDefinition Height="*" />
+            <!-- Fila 4: Tablero Kanban (3 columnas) -->
+            <RowDefinition Height="Auto" />
+            <!-- Fila 5: Panel expandible Auditoría ADO.NET -->
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#F4F5F7" Padding="15" CornerRadius="8" Margin="0,0,0,15">
+        <!-- FILA 0: CABECERA + MÉTRICAS ADO.NET -->
+        <DockPanel Grid.Row="0" Margin="4,0,4,10">
+            <StackPanel DockPanel.Dock="Left">
+                <TextBlock Text="MiniKanban · Acceso a Datos" FontSize="20" FontWeight="Bold" Foreground="#172B4D" />
+                <TextBlock Text="EF Core + SQLite · LINQ · Repository · DIP · ADO.NET" FontSize="12" Foreground="#5E6C84" />
+            </StackPanel>
 
-            <Grid>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Style="{StaticResource ResumenPillStyle}">
+                    <TextBlock Text="{Binding Resumen.TotalPorHacer, StringFormat='Por hacer: {0}'}" FontSize="12" FontWeight="SemiBold" Foreground="#172B4D" />
+                </Border>
+                <Border Style="{StaticResource ResumenPillStyle}">
+                    <TextBlock Text="{Binding Resumen.TotalEnProgreso, StringFormat='En progreso: {0}'}" FontSize="12" FontWeight="SemiBold" Foreground="#0052CC" />
+                </Border>
+                <Border Style="{StaticResource ResumenPillStyle}">
+                    <TextBlock Text="{Binding Resumen.TotalHechas, StringFormat='Hechas: {0}'}" FontSize="12" FontWeight="SemiBold" Foreground="#00875A" />
+                </Border>
+                <Border Style="{StaticResource ResumenPillStyle}" Background="#FFEBE6" BorderBrush="#FFBDAD">
+                    <TextBlock Text="{Binding Resumen.TotalPrioridadAlta, StringFormat='Alta pend.: {0}'}" FontSize="12" FontWeight="SemiBold" Foreground="#BF2600" />
+                </Border>
+                <Border Style="{StaticResource ResumenPillStyle}" Background="#FFFAE6" BorderBrush="#FFE380">
+                    <TextBlock Text="{Binding Resumen.TotalVencidas, StringFormat='Vencidas: {0}'}" FontSize="12" FontWeight="SemiBold" Foreground="#B25E09" />
+                </Border>
 
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="3*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <Button Content="📊 Auditoría SQL (ADO.NET)"
+                        Command="{Binding ToggleAuditoriaAdoCommand}"
+                        Margin="8,0,0,0" Padding="12,5" Background="#172B4D" Foreground="White"
+                        BorderThickness="0" FontWeight="SemiBold" Cursor="Hand" />
+            </StackPanel>
+            <Grid />
+        </DockPanel>
 
-                <StackPanel Grid.Row="0" Grid.Column="0" Margin="5">
-                    <TextBlock Text="Título:" FontWeight="Bold" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding NuevoTitulo, UpdateSourceTrigger=PropertyChanged}" Padding="5"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="0" Grid.Column="1" Margin="5">
-                    <TextBlock Text="Descripción:" FontWeight="Bold" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding NuevaDescripcion}" Padding="5"/>
-                </StackPanel>
-
-                <Button Grid.Row="0" Grid.Column="2" Content="➕ Crear Tarea"
-                        Command="{Binding CrearTareaCommand}"
-                        Margin="5,20,5,5" Padding="15,6" Background="#0052CC" Foreground="White" FontWeight="Bold"/>
-
-            </Grid>
-
-
+        <!-- FILA 1: BANNER DE ERRORES -->
+        <Border Grid.Row="1" Margin="4,0,4,10" Padding="10,8" CornerRadius="6"
+                Background="#FFEBE6" BorderBrush="#FF8F73" BorderThickness="1">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding MensajeError}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding MensajeError}" Foreground="#BF2600" FontWeight="SemiBold" />
         </Border>
 
-        <Grid Grid.Row="1">
+        <!-- FILA 2: FORMULARIO DE NUEVA TAREA -->
+        <Border Grid.Row="2" Background="#F4F5F7" Padding="12" CornerRadius="8" Margin="4,0,4,10"
+                BorderBrush="#DFE1E6" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="2.5*" />
+                    <ColumnDefinition Width="1.2*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1.2*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="4">
+                    <TextBlock Text="Título:" FontWeight="Bold" FontSize="12" Margin="0,0,0,3" Foreground="#172B4D" />
+                    <TextBox Text="{Binding NuevoTitulo, UpdateSourceTrigger=PropertyChanged}" Padding="5" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="4">
+                    <TextBlock Text="Descripción:" FontWeight="Bold" FontSize="12" Margin="0,0,0,3" Foreground="#172B4D" />
+                    <TextBox Text="{Binding NuevaDescripcion, UpdateSourceTrigger=PropertyChanged}" Padding="5" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Margin="4">
+                    <TextBlock Text="Categoría:" FontWeight="Bold" FontSize="12" Margin="0,0,0,3" Foreground="#172B4D" />
+                    <ComboBox ItemsSource="{Binding Categorias}"
+                              SelectedItem="{Binding CategoriaSeleccionada}"
+                              DisplayMemberPath="Nombre" Padding="5,4" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Margin="4">
+                    <TextBlock Text="Prioridad:" FontWeight="Bold" FontSize="12" Margin="0,0,0,3" Foreground="#172B4D" />
+                    <ComboBox ItemsSource="{Binding PrioridadesDisponibles}"
+                              SelectedItem="{Binding NuevaPrioridad}" Padding="5,4" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Margin="4">
+                    <TextBlock Text="Fecha Límite:" FontWeight="Bold" FontSize="12" Margin="0,0,0,3" Foreground="#172B4D" />
+                    <DatePicker SelectedDate="{Binding NuevaFechaLimite}" Padding="2" />
+                </StackPanel>
+
+                <Button Grid.Column="5" Content="➕ Crear Tarea"
+                        Command="{Binding CrearTareaCommand}"
+                        Margin="6,19,4,4" Padding="14,6" Background="#0052CC" Foreground="White"
+                        BorderThickness="0" FontWeight="Bold" Cursor="Hand" />
+            </Grid>
+        </Border>
+
+        <!-- FILA 3: BARRA DE BÚSQUEDA Y FILTROS (LINQ) -->
+        <Border Grid.Row="3" Background="White" Padding="10,8" CornerRadius="8" Margin="4,0,4,10"
+                BorderBrush="#DFE1E6" BorderThickness="1">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🔍 Buscar (LINQ):" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#172B4D" />
+                    <TextBox Width="200" Padding="5,3" Margin="0,0,8,0"
+                             Text="{Binding TextoBusqueda, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding CargarTableroCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <ComboBox Width="155" Margin="0,0,8,0" Padding="5,3"
+                              ItemsSource="{Binding FiltrosPrioridad}"
+                              SelectedItem="{Binding FiltroPrioridadSeleccionada}"
+                              DisplayMemberPath="Etiqueta" />
+
+                    <ComboBox Width="155" Margin="0,0,10,0" Padding="5,3"
+                              ItemsSource="{Binding CategoriasFiltro}"
+                              SelectedItem="{Binding CategoriaFiltroSeleccionada}"
+                              DisplayMemberPath="Nombre" />
+
+                    <CheckBox Content="Ordenar por fecha límite" VerticalAlignment="Center" Margin="0,0,10,0"
+                              IsChecked="{Binding OrdenarPorFechaLimite}"
+                              Command="{Binding CargarTableroCommand}" />
+
+                    <Button Content="Filtrar" Command="{Binding CargarTableroCommand}"
+                            Padding="11,4" Margin="0,0,6,0" Background="#42526E" Foreground="White"
+                            BorderThickness="0" Cursor="Hand" />
+
+                    <Button Content="Limpiar" Command="{Binding LimpiarFiltrosCommand}"
+                            Padding="10,4" Background="#F4F5F7" Foreground="#172B4D"
+                            BorderBrush="#DFE1E6" BorderThickness="1" Cursor="Hand" />
+                </StackPanel>
+
+                <TextBlock DockPanel.Dock="Right" Text="{Binding MensajeEstado}" VerticalAlignment="Center"
+                           HorizontalAlignment="Right" FontSize="12" Foreground="#5E6C84" />
+            </DockPanel>
+        </Border>
+
+        <!-- FILA 4: TABLERO KANBAN (3 COLUMNAS) -->
+        <Grid Grid.Row="4">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="#EBECF0" CornerRadius="8" Padding="10" Margin="5">
-
+            <!-- COLUMNA 0: POR HACER -->
+            <Border Grid.Column="0" Style="{StaticResource ColumnaKanbanStyle}">
                 <DockPanel>
-
-                    <TextBlock DockPanel.Dock="Top" Text="📋 Por Hacer" FontWeight="Bold" FontSize="15" Margin="0,0,0,10" Foreground="#172B4D"/>
+                    <TextBlock DockPanel.Dock="Top" Text="📋 Por Hacer" FontWeight="Bold" FontSize="15"
+                               Margin="0,0,0,10" Foreground="#172B4D" />
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding TareasPorHacer}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="White" CornerRadius="6" Padding="10" Margin="0,0,0,8">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Titulo}" FontWeight="Bold" FontSize="14" Foreground="#172B4D"/>
-                                            <TextBlock Text="{Binding Descripcion}" TextWrapping="Wrap" Margin="0,4,0,8" Foreground="#5E6C84"/>
-                                            <DockPanel>
-                                                <Button DockPanel.Dock="Left" Content="🗑️" Command="{Binding DataContext.EliminarTareaCommand,RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Cursor="Hand"/>
-
-                                                <Button DockPanel.Dock="Right" Content="Avanzar ➡️" Command="{Binding DataContext.AvanzarTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}" Background="#0052CC" Foreground="White" Padding="8,3" BorderThickness="0" Cursor="Hand"/>
-                                            </DockPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ItemsControl ItemsSource="{Binding TareasPorHacer}"
+                                      ItemTemplate="{StaticResource TarjetaKanbanTemplate}" />
                     </ScrollViewer>
-
                 </DockPanel>
-                
             </Border>
 
             <!-- COLUMNA 1: EN PROGRESO -->
-            <Border Grid.Column="1" Background="#EBECF0" CornerRadius="8" Padding="10" Margin="5">
+            <Border Grid.Column="1" Style="{StaticResource ColumnaKanbanStyle}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="⏳ En Progreso" FontWeight="Bold" FontSize="15" Margin="0,0,0,10" Foreground="#172B4D"/>
+                    <TextBlock DockPanel.Dock="Top" Text="⏳ En Progreso" FontWeight="Bold" FontSize="15"
+                               Margin="0,0,0,10" Foreground="#172B4D" />
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding TareasEnProgreso}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="White" CornerRadius="6" Padding="10" Margin="0,0,0,8">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Titulo}" FontWeight="Bold" FontSize="14" Foreground="#172B4D"/>
-                                            <TextBlock Text="{Binding Descripcion}" TextWrapping="Wrap" Margin="0,4,0,8" Foreground="#5E6C84"/>
-                                            <DockPanel>
-                                                <Button DockPanel.Dock="Left" Content="⬅️" 
-                                            Command="{Binding DataContext.RetrocederTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}" Margin="0,0,5,0" Padding="5,2" Cursor="Hand"/>
-                                                <Button DockPanel.Dock="Left" Content="🗑️" 
-                                            Command="{Binding DataContext.EliminarTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Cursor="Hand"/>
-                                                <Button DockPanel.Dock="Right" Content="Completar ➡️" 
-                                            Command="{Binding DataContext.AvanzarTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}" Background="#00875A" Foreground="White" Padding="8,3" BorderThickness="0" Cursor="Hand"/>
-                                            </DockPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ItemsControl ItemsSource="{Binding TareasEnProgreso}"
+                                      ItemTemplate="{StaticResource TarjetaKanbanTemplate}" />
                     </ScrollViewer>
                 </DockPanel>
             </Border>
 
             <!-- COLUMNA 2: HECHAS -->
-            <Border Grid.Column="2" Background="#EBECF0" CornerRadius="8" Padding="10" Margin="5">
+            <Border Grid.Column="2" Style="{StaticResource ColumnaKanbanStyle}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="✅ Hechas" FontWeight="Bold" FontSize="15" Margin="0,0,0,10" Foreground="#172B4D"/>
+                    <TextBlock DockPanel.Dock="Top" Text="✅ Hechas" FontWeight="Bold" FontSize="15"
+                               Margin="0,0,0,10" Foreground="#172B4D" />
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding TareasHechas}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="White" CornerRadius="6" Padding="10" Margin="0,0,0,8">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Titulo}" FontWeight="Bold" FontSize="14" Foreground="#172B4D" TextDecorations="Strikethrough"/>
-                                            <TextBlock Text="{Binding Descripcion}" TextWrapping="Wrap" Margin="0,4,0,8" Foreground="#5E6C84"/>
-                                            <DockPanel>
-                                                <Button DockPanel.Dock="Left" Content="⬅️ Reabrir" 
-                                            Command="{Binding DataContext.RetrocederTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}" Padding="6,2" Cursor="Hand"/>
-                                                <Button DockPanel.Dock="Right" Content="🗑️" 
-                                            Command="{Binding DataContext.EliminarTareaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Cursor="Hand"/>
-                                            </DockPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ItemsControl ItemsSource="{Binding TareasHechas}"
+                                      ItemTemplate="{StaticResource TarjetaKanbanTemplate}" />
                     </ScrollViewer>
                 </DockPanel>
             </Border>
-
         </Grid>
-        
-    </Grid>
 
+        <!-- FILA 5: PANEL EXPANDIBLE DE AUDITORÍA SQL (ADO.NET + DataTable) -->
+        <Border Grid.Row="5" Margin="4,10,4,0" Padding="12" CornerRadius="8"
+                Background="White" BorderBrush="#DFE1E6" BorderThickness="1"
+                Visibility="{Binding MostrarAuditoriaAdo, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock DockPanel.Dock="Left" Text="🗄️ Vista SQL Directa (ADO.NET · DataTable)"
+                               FontWeight="Bold" FontSize="13.5" VerticalAlignment="Center" Foreground="#172B4D" />
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <ComboBox Width="160" Margin="0,0,8,0" Padding="5,3"
+                                  ItemsSource="{Binding FiltrosEstadoAuditoria}"
+                                  SelectedItem="{Binding FiltroEstadoAuditoria}"
+                                  DisplayMemberPath="Etiqueta" />
+                        <Button Content="🔄 Consultar SQL" Command="{Binding ActualizarAuditoriaAdoCommand}"
+                                Padding="10,4" Background="#0052CC" Foreground="White"
+                                BorderThickness="0" Cursor="Hand" />
+                    </StackPanel>
+                    <Grid />
+                </DockPanel>
+
+                <DataGrid ItemsSource="{Binding TablaAuditoria.DefaultView}"
+                          AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                          MaxHeight="170" FontSize="12" />
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

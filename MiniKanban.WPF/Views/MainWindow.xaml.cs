@@ -1,24 +1,26 @@
-﻿using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using MiniKanban.WPF.Services;
 using MiniKanban.WPF.ViewModels;
 
-namespace MiniKanban.WPF
+namespace MiniKanban.WPF.Views;
+
+/// <summary>
+/// Ventana principal del tablero Kanban. Recibe su ViewModel por Inyección de Dependencias.
+/// </summary>
+public partial class MainWindow : Window
 {
-    public partial class MainWindow : Window
+    private readonly MainViewModel _viewModel;
+
+    public MainWindow(MainViewModel viewModel)
     {
-        public MainWindow()
-        {
-            InitializeComponent();
-            DataContext = new MainViewModel(new TareaService());
-        }
+        InitializeComponent();
+        _viewModel = viewModel;
+        DataContext = _viewModel;
+        Loaded += MainWindow_Loaded;
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= MainWindow_Loaded;
+        await _viewModel.InicializarCommand.ExecuteAsync(null);
     }
 }
