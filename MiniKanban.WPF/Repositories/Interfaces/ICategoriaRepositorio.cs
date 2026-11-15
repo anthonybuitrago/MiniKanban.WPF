@@ -1,6 +1,6 @@
 using MiniKanban.WPF.Models;
 
-namespace MiniKanban.WPF.Repositories;
+namespace MiniKanban.WPF.Repositories.Interfaces;
 
 /// <summary>
 /// Abstracción para el acceso a categorías de tareas (DIP).

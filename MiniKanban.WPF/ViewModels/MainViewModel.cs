@@ -3,8 +3,8 @@ using System.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MiniKanban.WPF.Models;
-using MiniKanban.WPF.Repositories;
-using MiniKanban.WPF.Services;
+using MiniKanban.WPF.Repositories.Interfaces;
+using MiniKanban.WPF.Services.Interfaces;
 
 namespace MiniKanban.WPF.ViewModels;
 

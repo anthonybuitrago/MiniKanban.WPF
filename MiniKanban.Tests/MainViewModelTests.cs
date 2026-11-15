@@ -1,8 +1,8 @@
 using System.Data;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using MiniKanban.Tests.Fakes;
 using MiniKanban.WPF.Models;
-using MiniKanban.WPF.Repositories;
 using MiniKanban.WPF.Services;
 using MiniKanban.WPF.ViewModels;
 using MiniKanban.WPF.Views;

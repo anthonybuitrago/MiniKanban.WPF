@@ -1,6 +1,7 @@
 using MiniKanban.WPF.Models;
+using MiniKanban.WPF.Repositories.Interfaces;
 
-namespace MiniKanban.WPF.Repositories;
+namespace MiniKanban.Tests.Fakes;
 
 /// <summary>
 /// Implementación en memoria de ICategoriaRepositorio para pruebas unitarias sin BD.

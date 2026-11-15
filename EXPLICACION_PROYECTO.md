@@ -111,10 +111,10 @@ Clase `public class AppDbContext : DbContext` que representa una unidad de traba
 
 ---
 
-## 5. Capa de Validación / Servicios (`Services/`)
+## 5. Capa de Validación / Servicios (`Services/` y `Services/Interfaces/`)
 
-### 5.1 [ITareaValidador.cs](MiniKanban.WPF/Services/ITareaValidador.cs)
-Interfaz `public interface ITareaValidador` con un único método `void Validar(Tarea tarea);`.
+### 5.1 [ITareaValidador.cs](MiniKanban.WPF/Services/Interfaces/ITareaValidador.cs)
+Interfaz `public interface ITareaValidador` (`namespace MiniKanban.WPF.Services.Interfaces`) con un único método `void Validar(Tarea tarea);`.
 - **Por qué existe:** aplica **SRP** sacando reglas de negocio fuera de `MainViewModel` y **DIP** permitiendo inyectar o sustituir la validación.
 
 ### 5.2 [TareaValidador.cs](MiniKanban.WPF/Services/TareaValidador.cs)
@@ -132,24 +132,24 @@ Implementación `public class TareaValidador : ITareaValidador`:
 
 ## 6. Capa de Repositorios (`Repositories/`)
 
-### 6.1 Contratos (Interfaces para DIP)
+### 6.1 Contratos (`Repositories/Interfaces/` — DIP)
 
-1. **[ITareaRepositorio.cs](MiniKanban.WPF/Repositories/ITareaRepositorio.cs)** (`ITareaRepositorio`):
+1. **[ITareaRepositorio.cs](MiniKanban.WPF/Repositories/Interfaces/ITareaRepositorio.cs)** (`ITareaRepositorio`, `namespace MiniKanban.WPF.Repositories.Interfaces`):
    - `ObtenerFiltradasAsync(string? textoBusqueda = null, PrioridadTarea? prioridad = null, int? categoriaId = null, bool ordenarPorFechaLimite = true)` -> `Task<List<Tarea>>`: obtiene tareas aplicando filtros y orden.
    - `ObtenerPorIdAsync(int id)` -> `Task<Tarea?>`: busca una tarea puntual por ID.
    - `AgregarAsync(Tarea tarea)` -> `Task`: persiste una nueva tarea.
    - `CambiarEstadoAsync(int id, EstadoTarea nuevoEstado)` -> `Task`: actualiza la columna (`Estado`) de una tarea.
    - `EliminarAsync(int id)` -> `Task`: elimina una tarea por ID.
-2. **[ICategoriaRepositorio.cs](MiniKanban.WPF/Repositories/ICategoriaRepositorio.cs)** (`ICategoriaRepositorio`):
+2. **[ICategoriaRepositorio.cs](MiniKanban.WPF/Repositories/Interfaces/ICategoriaRepositorio.cs)** (`ICategoriaRepositorio`):
    - `ObtenerTodasAsync()` -> `Task<List<Categoria>>`: lista las categorías disponibles.
    - `AgregarAsync(Categoria categoria)` -> `Task`: registra una nueva categoría.
-3. **[IEstadisticasRepositorio.cs](MiniKanban.WPF/Repositories/IEstadisticasRepositorio.cs)** (`IEstadisticasRepositorio`):
+3. **[IEstadisticasRepositorio.cs](MiniKanban.WPF/Repositories/Interfaces/IEstadisticasRepositorio.cs)** (`IEstadisticasRepositorio`):
    - `ObtenerResumenAsync(DateTime fechaReferencia)` -> `Task<ResumenKanban>`: devuelve los contadores globales del tablero usando `fechaReferencia` para evaluar tareas vencidas.
    - `ObtenerTablaAuditoriaAsync(EstadoTarea? estadoFiltro = null)` -> `Task<DataTable>`: devuelve una tabla en memoria para auditoría SQL.
 
-### 6.2 Implementaciones EF Core + SQLite
+### 6.2 Implementaciones EF Core + SQLite (`Repositories/EfCore/`)
 
-#### [TareaRepositorioEfCore.cs](MiniKanban.WPF/Repositories/TareaRepositorioEfCore.cs)
+#### [TareaRepositorioEfCore.cs](MiniKanban.WPF/Repositories/EfCore/TareaRepositorioEfCore.cs)
 - **Campo privado:** `private readonly IDbContextFactory<AppDbContext> _contextFactory;`
 - **Métodos:**
   - **`ObtenerFiltradasAsync(...)`:**
@@ -177,14 +177,14 @@ Implementación `public class TareaValidador : ITareaValidador`:
   - **`EliminarAsync(int id)`:** busca con `FindAsync(id)`; si existe, `db.Tareas.Remove(tarea);` la marca como `Deleted` y `GuardarCambiosAsync(db)` ejecuta `DELETE`.
   - **`GuardarCambiosAsync(AppDbContext db)` (helper privado estático):** envuelve `await db.SaveChangesAsync();` en `try/catch (DbUpdateException ex)` y lo relanza como `InvalidOperationException` con mensaje legible si falla una restricción (por ejemplo FK inválida).
 
-#### [CategoriaRepositorioEfCore.cs](MiniKanban.WPF/Repositories/CategoriaRepositorioEfCore.cs)
+#### [CategoriaRepositorioEfCore.cs](MiniKanban.WPF/Repositories/EfCore/CategoriaRepositorioEfCore.cs)
 - **Campo privado:** `private readonly IDbContextFactory<AppDbContext> _contextFactory;`
 - **`ObtenerTodasAsync()`:** consulta `db.Categorias.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync()`.
 - **`AgregarAsync(Categoria categoria)`:** verifica no nulo, hace `db.Categorias.Add(categoria)` y guarda capturando `DbUpdateException`.
 
-### 6.3 Implementación ADO.NET puro
+### 6.3 Implementación ADO.NET puro (`Repositories/AdoNet/`)
 
-#### [EstadisticasAdoRepositorio.cs](MiniKanban.WPF/Repositories/EstadisticasAdoRepositorio.cs)
+#### [EstadisticasAdoRepositorio.cs](MiniKanban.WPF/Repositories/AdoNet/EstadisticasAdoRepositorio.cs)
 Demuestra uso directo de `Microsoft.Data.Sqlite` sin EF Core.
 - **Campo privado:** `private readonly string _connectionString;`
 - **`ObtenerResumenAsync(DateTime fechaReferencia)` (Modo conectado):**
@@ -203,9 +203,9 @@ Demuestra uso directo de `Microsoft.Data.Sqlite` sin EF Core.
   3. Si `estadoFiltro.HasValue`, concatena `" WHERE t.Estado = @estado"` y agrega el parámetro `@estado`.
   4. Ordena con `" ORDER BY t.Id DESC;"`, ejecuta `ExecuteReaderAsync()` y carga todo el resultado en memoria con `tabla.Load(reader);` antes de cerrar la conexión. Así la vista enlaza directamente `TablaAuditoria.DefaultView` a un `DataGrid`.
 
-### 6.4 Implementaciones en Memoria (Dobles para Pruebas y DIP)
+### 6.4 Dobles en Memoria para Pruebas (`MiniKanban.Tests/Fakes/`)
 
-1. **[TareaRepositorioMemoria.cs](MiniKanban.WPF/Repositories/TareaRepositorioMemoria.cs):**
+1. **[TareaRepositorioMemoria.cs](MiniKanban.Tests/Fakes/TareaRepositorioMemoria.cs):**
    - **Campos:**
      - `private readonly List<Tarea> _tareas = new();` — almacenamiento en RAM.
      - `private readonly Dictionary<int, Categoria> _categorias;` — diccionario indexado por `Id` para asociar categorías rápido.
@@ -213,10 +213,10 @@ Demuestra uso directo de `Microsoft.Data.Sqlite` sin EF Core.
    - **Constructor:** carga `categoriasIniciales` (o las 4 por defecto: `Universidad`, `Trabajo`, `Personal`, `General`) convertidas a diccionario con `.ToDictionary(c => c.Id)`.
    - **Métodos:** replican con LINQ en memoria exactamente el comportamiento de `TareaRepositorioEfCore` (búsqueda case-insensitive con `StringComparison.OrdinalIgnoreCase`, filtros por prioridad/categoría, ordenamiento y validación de existencia de `CategoriaId` en `AgregarAsync`).
    - **Helper `ClonarConCategoria(Tarea origen)`:** busca la categoría con `_categorias.TryGetValue(...)` y devuelve una **copia nueva** de cada `Tarea` al consultar o agregar, simulando el comportamiento desacoplado de `AsNoTracking()` (modificar un objeto retornado en memoria no altera la lista interna del repositorio).
-2. **[CategoriaRepositorioMemoria.cs](MiniKanban.WPF/Repositories/CategoriaRepositorioMemoria.cs):**
+2. **[CategoriaRepositorioMemoria.cs](MiniKanban.Tests/Fakes/CategoriaRepositorioMemoria.cs):**
    - **Campos:** `private readonly List<Categoria> _categorias;` y `private int _siguienteId;` (calculado con `_categorias.Count == 0 ? 1 : _categorias.Max(c => c.Id) + 1`).
    - **Métodos:** `ObtenerTodasAsync()` (ordenadas por `Nombre`) y `AgregarAsync(Categoria)` asignando `_siguienteId++`.
-3. **[EstadisticasMemoriaRepositorio.cs](MiniKanban.WPF/Repositories/EstadisticasMemoriaRepositorio.cs):**
+3. **[EstadisticasMemoriaRepositorio.cs](MiniKanban.Tests/Fakes/EstadisticasMemoriaRepositorio.cs):**
    - **Campo:** `private readonly ITareaRepositorio _tareaRepositorio;`.
    - **`ObtenerResumenAsync(DateTime fechaReferencia)`:** usa LINQ `.Count(...)` replicando exactamente los mismos criterios que la consulta SQL de ADO.NET.
    - **`ObtenerTablaAuditoriaAsync(EstadoTarea? estadoFiltro = null)`:** crea un `DataTable("AuditoriaTareas")` con columnas tipadas (`ID`, `Titulo`, `Categoria`, `Estado`, `Prioridad`, `FechaLimite`), ordena `filtradas.OrderByDescending(x => x.Id)` y ejecuta el **ciclo `foreach`**:

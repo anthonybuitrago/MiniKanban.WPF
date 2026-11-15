@@ -1,6 +1,7 @@
 using MiniKanban.WPF.Models;
+using MiniKanban.WPF.Repositories.Interfaces;
 
-namespace MiniKanban.WPF.Repositories;
+namespace MiniKanban.Tests.Fakes;
 
 /// <summary>
 /// Implementación en memoria de ITareaRepositorio (doble de prueba para demostrar DIP sin BD real).

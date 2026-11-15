@@ -1,8 +1,9 @@
 using System.Data;
 using Microsoft.Data.Sqlite;
 using MiniKanban.WPF.Models;
+using MiniKanban.WPF.Repositories.Interfaces;
 
-namespace MiniKanban.WPF.Repositories;
+namespace MiniKanban.WPF.Repositories.AdoNet;
 
 /// <summary>
 /// Acceso a datos de bajo nivel usando ADO.NET puro (Connection, Command parametrizado, DataReader y DataTable)

@@ -4,8 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MiniKanban.WPF.Data;
 using MiniKanban.WPF.Models;
-using MiniKanban.WPF.Repositories;
+using MiniKanban.WPF.Repositories.AdoNet;
+using MiniKanban.WPF.Repositories.EfCore;
+using MiniKanban.WPF.Repositories.Interfaces;
 using MiniKanban.WPF.Services;
+using MiniKanban.WPF.Services.Interfaces;
 using MiniKanban.WPF.ViewModels;
 using MiniKanban.WPF.Views;
 

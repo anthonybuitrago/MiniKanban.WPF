@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using MiniKanban.WPF.Data;
 using MiniKanban.WPF.Models;
+using MiniKanban.WPF.Repositories.Interfaces;
 
-namespace MiniKanban.WPF.Repositories;
+namespace MiniKanban.WPF.Repositories.EfCore;
 
 /// <summary>
 /// Implementación del patrón Repository respaldada por Entity Framework Core y SQLite.

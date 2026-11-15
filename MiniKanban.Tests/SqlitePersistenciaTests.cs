@@ -4,7 +4,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MiniKanban.WPF.Data;
 using MiniKanban.WPF.Models;
-using MiniKanban.WPF.Repositories;
+using MiniKanban.WPF.Repositories.AdoNet;
+using MiniKanban.WPF.Repositories.EfCore;
 
 namespace MiniKanban.Tests;
 

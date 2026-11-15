@@ -1,4 +1,5 @@
 using MiniKanban.WPF.Models;
+using MiniKanban.WPF.Services.Interfaces;
 
 namespace MiniKanban.WPF.Services;
 

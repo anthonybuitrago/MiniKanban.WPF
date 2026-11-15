@@ -48,27 +48,32 @@ MiniKanban.WPF/
 │   │   ├── ResumenKanban.cs                     # Record de métricas agregadas ADO.NET
 │   │   └── Tarea.cs                             # Entidad Tarea + EstadoTarea + PrioridadTarea
 │   ├── Repositories/
-│   │   ├── ITareaRepositorio.cs                 # Contrato Repository de tareas
-│   │   ├── ICategoriaRepositorio.cs             # Contrato Repository de categorías
-│   │   ├── IEstadisticasRepositorio.cs          # Contrato de métricas y DataTable
-│   │   ├── TareaRepositorioEfCore.cs            # Implementación EF Core (LINQ + AsNoTracking + Change Tracker)
-│   │   ├── CategoriaRepositorioEfCore.cs        # Implementación EF Core de categorías
-│   │   ├── EstadisticasAdoRepositorio.cs        # Implementación ADO.NET (DataReader + DataTable)
-│   │   ├── TareaRepositorioMemoria.cs           # Implementación en memoria (DIP / tests)
-│   │   ├── CategoriaRepositorioMemoria.cs       # Implementación en memoria (DIP / tests)
-│   │   └── EstadisticasMemoriaRepositorio.cs    # Implementación en memoria (DIP / tests)
+│   │   ├── Interfaces/
+│   │   │   ├── ITareaRepositorio.cs                 # Contrato Repository de tareas
+│   │   │   ├── ICategoriaRepositorio.cs             # Contrato Repository de categorías
+│   │   │   └── IEstadisticasRepositorio.cs          # Contrato de métricas y DataTable
+│   │   ├── EfCore/
+│   │   │   ├── TareaRepositorioEfCore.cs            # Implementación EF Core (LINQ + AsNoTracking + Change Tracker)
+│   │   │   └── CategoriaRepositorioEfCore.cs        # Implementación EF Core de categorías
+│   │   └── AdoNet/
+│   │       └── EstadisticasAdoRepositorio.cs        # Implementación ADO.NET (DataReader + DataTable)
 │   ├── Services/
-│   │   ├── ITareaValidador.cs                   # Contrato de validación de dominio (SRP)
-│   │   └── TareaValidador.cs                    # Reglas de validación de tareas
+│   │   ├── Interfaces/
+│   │   │   └── ITareaValidador.cs                   # Contrato de validación de dominio (SRP)
+│   │   └── TareaValidador.cs                        # Reglas de validación de tareas
 │   ├── ViewModels/
-│   │   └── MainViewModel.cs                     # Lógica de presentación asíncrona y comandos MVVM
+│   │   └── MainViewModel.cs                         # Lógica de presentación asíncrona y comandos MVVM
 │   ├── Views/
-│   │   ├── MainWindow.xaml                      # UI WPF + plantilla compartida de tarjeta + DataGrid ADO.NET
-│   │   └── MainWindow.xaml.cs                   # Inicialización con DI y carga asíncrona
-│   └── App.xaml / App.xaml.cs                   # Contenedor DI + EnsureCreated()
+│   │   ├── MainWindow.xaml                          # UI WPF + plantilla compartida de tarjeta + DataGrid ADO.NET
+│   │   └── MainWindow.xaml.cs                       # Inicialización con DI y carga asíncrona
+│   └── App.xaml / App.xaml.cs                       # Contenedor DI + EnsureCreated()
 └── MiniKanban.Tests/
-    ├── MainViewModelTests.cs                    # Pruebas unitarias en memoria del ViewModel (DIP)
-    └── SqlitePersistenciaTests.cs               # Pruebas de integración con SQLite (EF Core + ADO.NET)
+    ├── Fakes/
+    │   ├── TareaRepositorioMemoria.cs               # Doble en memoria (DIP / tests)
+    │   ├── CategoriaRepositorioMemoria.cs           # Doble en memoria (DIP / tests)
+    │   └── EstadisticasMemoriaRepositorio.cs        # Doble en memoria (DIP / tests)
+    ├── MainViewModelTests.cs                        # Pruebas unitarias en memoria del ViewModel (DIP)
+    └── SqlitePersistenciaTests.cs                   # Pruebas de integración con SQLite (EF Core + ADO.NET)
 ```
 
 Consulta la explicación detallada de cada clase, interfaz, método, propiedad, ciclo y decisión arquitectónica en [EXPLICACION_PROYECTO.md](EXPLICACION_PROYECTO.md).
